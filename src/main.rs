@@ -29,7 +29,10 @@ fn enable_raw_mode() -> io::Result<()> {
     let fd = libc::STDIN_FILENO;
     let mut raw = Termios::from_fd(fd)?;
     let _ = tcgetattr(fd, &mut raw);
-    raw.c_lflag &= !(termios::ECHO | termios::ICANON);
+    raw.c_iflag &= !(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    raw.c_oflag &= !(OPOST);
+    raw.c_cflag |= CS8;
+    raw.c_lflag &= !(ECHO | ICANON | IEXTEN | ISIG);
     let _ = tcsetattr(fd, libc::TCSAFLUSH, &mut raw);
     Ok(())
 }
