@@ -33,6 +33,8 @@ fn enable_raw_mode() -> io::Result<()> {
     raw.c_oflag &= !(OPOST);
     raw.c_cflag |= CS8;
     raw.c_lflag &= !(ECHO | ICANON | IEXTEN | ISIG);
+    raw.c_cc[VMIN] = 0;
+    raw.c_cc[VTIME] = 1;
     let _ = tcsetattr(fd, libc::TCSAFLUSH, &mut raw);
     Ok(())
 }
