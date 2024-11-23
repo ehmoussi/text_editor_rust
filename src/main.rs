@@ -2,6 +2,11 @@ use std::io::{self, Read, Write};
 
 use libc;
 use termios::*;
+
+fn cltr_key(key: u8) -> u8 {
+    return key & 0x1f;
+}
+
 struct OrigTermios {
     termios: Termios,
 }
@@ -50,7 +55,7 @@ fn main() -> () {
         let c = buffer[0] as char;
         print!("{}", buffer[0]);
         io::stdout().flush().unwrap();
-        if c == 'q' {
+        if buffer[0] == cltr_key(b'q') {
             break;
         };
     }
