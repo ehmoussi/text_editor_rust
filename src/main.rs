@@ -13,7 +13,8 @@ struct OrigTermios {
 
 impl Drop for OrigTermios {
     fn drop(&mut self) {
-        println!("disable raw mode");
+        print!("{}", "\x1b[2J");
+        print!("{}", "\x1b[H");
         let _ = disable_raw_mode(self.termios);
     }
 }
@@ -63,12 +64,18 @@ fn editor_process_key() -> bool {
     return is_finished;
 }
 
+fn editor_refresh_screen() {
+    print!("{}", "\x1b[2J");
+    print!("{}", "\x1b[H");
+}
+
 fn main() -> () {
     let _orig_termios = OrigTermios {
         termios: create_termios(),
     };
     let _ = enable_raw_mode();
     loop {
+        // editor_refresh_screen();
         let is_finished = editor_process_key();
         if is_finished {
             break;
