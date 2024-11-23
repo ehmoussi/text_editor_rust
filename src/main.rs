@@ -1,17 +1,19 @@
 use std::io::{self, Read, Write};
 
-use libc;
+use libc::{self, winsize};
 use termios::*;
 
 fn ctrl_key(key: u8) -> u8 {
     return key & 0x1f;
 }
 
-struct OrigTermios {
+struct EditorConfig {
+    screen_rows: u16,
+    screen_cols: u16,
     termios: Termios,
 }
 
-impl Drop for OrigTermios {
+impl Drop for EditorConfig {
     fn drop(&mut self) {
         print!("{}", "\x1b[2J");
         print!("{}", "\x1b[H");
@@ -64,26 +66,45 @@ fn editor_process_key() -> bool {
     return is_finished;
 }
 
-fn editor_draw_rows() {
-    for _ in 0..23 {
+fn get_window_size() -> (u16, u16) {
+    let mut ws = libc::winsize {
+        ws_row: 0,
+        ws_col: 0,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+    unsafe {
+        if libc::ioctl(libc::STDOUT_FILENO, libc::TIOCGWINSZ, &mut ws) == 0 {
+            return (ws.ws_row, ws.ws_col);
+        }
+    };
+    return (0, 0);
+}
+
+fn editor_draw_rows(config: &EditorConfig) {
+    for _ in 0..config.screen_rows {
         print!("~\r\n");
     }
 }
 
-fn editor_refresh_screen() {
+fn editor_refresh_screen(config: &EditorConfig) {
     print!("{}", "\x1b[2J");
     print!("{}", "\x1b[H");
-    editor_draw_rows();
+    editor_draw_rows(config);
     print!("{}", "\x1b[H");
 }
 
 fn main() -> () {
-    let _orig_termios = OrigTermios {
+    let (screen_rows, screen_cols) = get_window_size();
+    println!("Size of the screen {}x{}", screen_rows, screen_cols);
+    let _editor_config = EditorConfig {
+        screen_rows,
+        screen_cols,
         termios: create_termios(),
     };
     let _ = enable_raw_mode();
     loop {
-        // editor_refresh_screen();
+        // editor_refresh_screen(&_editor_config);
         let is_finished = editor_process_key();
         if is_finished {
             break;
