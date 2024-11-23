@@ -3,7 +3,7 @@ use std::io::{self, Read, Write};
 use libc;
 use termios::*;
 
-fn cltr_key(key: u8) -> u8 {
+fn ctrl_key(key: u8) -> u8 {
     return key & 0x1f;
 }
 
@@ -44,19 +44,34 @@ fn enable_raw_mode() -> io::Result<()> {
     Ok(())
 }
 
+fn editor_read_key() -> u8 {
+    let mut buffer = [0; 1];
+    let _ = io::stdin().read(&mut buffer[..]);
+    return buffer[0];
+}
+
+fn editor_process_key() -> bool {
+    let c = editor_read_key();
+    let is_finished = match c {
+        _ if c == ctrl_key(b'c') => true,
+        _ => {
+            print!("{}", c as char);
+            io::stdout().flush().unwrap();
+            false
+        }
+    };
+    return is_finished;
+}
+
 fn main() -> () {
     let _orig_termios = OrigTermios {
         termios: create_termios(),
     };
     let _ = enable_raw_mode();
-    let mut buffer = [0; 1];
     loop {
-        let _ = io::stdin().read(&mut buffer[..]);
-        let c = buffer[0] as char;
-        print!("{}", buffer[0]);
-        io::stdout().flush().unwrap();
-        if buffer[0] == cltr_key(b'q') {
+        let is_finished = editor_process_key();
+        if is_finished {
             break;
-        };
+        }
     }
 }
