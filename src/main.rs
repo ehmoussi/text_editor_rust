@@ -2,8 +2,19 @@ use std::io::{self, Read};
 
 use libc;
 use termios::*;
+struct OrigTermios {
+    termios: Termios,
+}
+
+impl Drop for OrigTermios {
+    fn drop(&mut self) {
+        println!("disable raw mode");
+        let _ = disable_raw_mode(self.termios);
+    }
+}
 
 fn create_termios() -> Termios {
+    println!("create originel termios");
     let fd = libc::STDIN_FILENO;
     return Termios::from_fd(fd).expect("Failed to create a termios struct");
 }
@@ -24,7 +35,9 @@ fn enable_raw_mode() -> io::Result<()> {
 }
 
 fn main() -> () {
-    let orig_termios = create_termios();
+    let _orig_termios = OrigTermios {
+        termios: create_termios(),
+    };
     let _ = enable_raw_mode();
     let mut buffer = [0; 1];
     loop {
@@ -32,7 +45,6 @@ fn main() -> () {
         let c = buffer[0] as char;
         println!("{}", c);
         if c == 'q' {
-            let _ = disable_raw_mode(orig_termios);
             break;
         };
     }
