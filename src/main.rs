@@ -64,8 +64,16 @@ fn editor_process_key() -> bool {
     return is_finished;
 }
 
+fn editor_draw_rows() {
+    for _ in 0..23 {
+        print!("~\r\n");
+    }
+}
+
 fn editor_refresh_screen() {
     print!("{}", "\x1b[2J");
+    print!("{}", "\x1b[H");
+    editor_draw_rows();
     print!("{}", "\x1b[H");
 }
 
