@@ -43,7 +43,7 @@ fn main() -> () {
     loop {
         let _ = io::stdin().read(&mut buffer[..]);
         let c = buffer[0] as char;
-        print!("{}", c);
+        print!("{}", buffer[0]);
         io::stdout().flush().unwrap();
         if c == 'q' {
             break;
