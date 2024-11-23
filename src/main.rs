@@ -1,4 +1,4 @@
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 
 use libc;
 use termios::*;
@@ -29,7 +29,7 @@ fn enable_raw_mode() -> io::Result<()> {
     let fd = libc::STDIN_FILENO;
     let mut raw = Termios::from_fd(fd)?;
     let _ = tcgetattr(fd, &mut raw);
-    raw.c_lflag &= !(libc::ECHO);
+    raw.c_lflag &= !(termios::ECHO | termios::ICANON);
     let _ = tcsetattr(fd, libc::TCSAFLUSH, &mut raw);
     Ok(())
 }
@@ -43,7 +43,8 @@ fn main() -> () {
     loop {
         let _ = io::stdin().read(&mut buffer[..]);
         let c = buffer[0] as char;
-        println!("{}", c);
+        print!("{}", c);
+        io::stdout().flush().unwrap();
         if c == 'q' {
             break;
         };
