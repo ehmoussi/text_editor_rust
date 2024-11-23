@@ -1,6 +1,8 @@
-use std::io::{self, Read, Write};
-
-use libc::{self, winsize};
+use libc::{self, c_char};
+use std::{
+    ffi::CString,
+    io::{self, Read, Write},
+};
 use termios::*;
 
 fn ctrl_key(key: u8) -> u8 {
@@ -9,7 +11,7 @@ fn ctrl_key(key: u8) -> u8 {
 
 struct EditorConfig {
     screen_rows: u16,
-    screen_cols: u16,
+    _screen_cols: u16,
     termios: Termios,
 }
 
@@ -66,6 +68,43 @@ fn editor_process_key() -> bool {
     return is_finished;
 }
 
+fn get_cursor_position() -> (u16, u16) {
+    print!("\x1b[6n");
+    // TODO: Manage the flush unwrap
+    io::stdout().flush().unwrap();
+    print!("\r\n");
+    io::stdout().flush().unwrap();
+    let mut buf = [0; 32];
+    let mut i = 0;
+    while i < buf.len() - 1 {
+        if io::stdin().read(&mut buf).unwrap_or(0) != 1 {
+            break;
+        }
+        if buf[i] == b'R' {
+            break;
+        }
+        i += 1;
+    }
+    buf[i] = b'\0';
+    if buf[0] != b'\x1b' || buf[1] != b'[' {
+        return (0, 0);
+    }
+    let (rows, cols): (u16, u16) = (0, 0);
+    let format = CString::new("%d;%d").expect("Failed to create a format");
+    unsafe {
+        if libc::sscanf(
+            buf[2..].as_ptr() as *const c_char,
+            format.as_ptr(),
+            &rows,
+            &cols,
+        ) == 2
+        {
+            return (rows, cols);
+        }
+    };
+    return (0, 0);
+}
+
 fn get_window_size() -> (u16, u16) {
     let mut ws = libc::winsize {
         ws_row: 0,
@@ -78,12 +117,18 @@ fn get_window_size() -> (u16, u16) {
             return (ws.ws_row, ws.ws_col);
         }
     };
-    return (0, 0);
+    print!("\x1b[999C\x1b[999B");
+    io::stdout().flush().unwrap();
+    return get_cursor_position();
 }
 
 fn editor_draw_rows(config: &EditorConfig) {
-    for _ in 0..config.screen_rows {
-        print!("~\r\n");
+    for row in 0..config.screen_rows {
+        print!("~");
+        if row < config.screen_rows - 1 {
+            print!("\r\n");
+            io::stdout().flush().unwrap();
+        }
     }
 }
 
@@ -99,12 +144,12 @@ fn main() -> () {
     println!("Size of the screen {}x{}", screen_rows, screen_cols);
     let _editor_config = EditorConfig {
         screen_rows,
-        screen_cols,
+        _screen_cols: screen_cols,
         termios: create_termios(),
     };
     let _ = enable_raw_mode();
     loop {
-        // editor_refresh_screen(&_editor_config);
+        editor_refresh_screen(&_editor_config);
         let is_finished = editor_process_key();
         if is_finished {
             break;
